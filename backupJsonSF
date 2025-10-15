@@ -1,0 +1,55 @@
+{
+  "Comment": "State machine to create weekly DynamoDB backups with SNS notification on failure",
+  "StartAt": "CreateBackup",
+  "States": {
+    "CreateBackup": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:dynamodb:createBackup",
+      "Parameters": {
+        "BackupName.$": "States.Format('MyDataBackup-{}', $$.Execution.StartTime)",
+        "TableName": "MyData"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "ServiceException",
+            "ThrottlingException",
+            "TooManyRequestsException"
+          ],
+          "IntervalSeconds": 5,
+          "MaxAttempts": 5,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.errorInfo",
+          "Next": "NotifyFailure"
+        }
+      ],
+      "Next": "Wait"
+    },
+    "Wait": {
+      "Type": "Wait",
+      "Seconds": 604800,
+      "Next": "CreateBackup"
+    },
+    "NotifyFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "Message.$": "States.Format('Backup failed for table MyData: {}', $.errorInfo.Cause)",
+        "TopicArn": "arn:aws:sns:us-east-1:123456789012:MyBackupAlerts"
+      },
+      "Next": "FailState"
+    },
+    "FailState": {
+      "Type": "Fail",
+      "Cause": "BackupFailed",
+      "Error": "CreateBackupError"
+    }
+  }
+}
