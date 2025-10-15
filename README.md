@@ -2,10 +2,10 @@
 Esse projeto tem como objetivo *exemplificar o uso da ferramenta AWS Step Functions, um serviço que facilita a automação de fluxos de trabalho* (Workflows) dentro da plataforma.
 Com ele, é possível *orquestrar diferentes serviços da AWS* de forma simples, visual e automatizada, tornando o desenvolvimento de processos complexos mais rápido e menos propenso a erros e trazendo coisas abstratas para o visual, o que pode facilitar ainda mais o desenvolvimento de automações.
 
-#Objetivo
+## Objetivo
 Demonstrar, na prática, como orquestrar um *Workflow automatizado* com o serviço Step Functions, integrando diferentes serviços das AWS que aprendi no decorrer do curso de forma ainda mais performática.
 
-#Documentação de Acesso
+## Documentação de Acesso
 
 1. Acesse sua conta [AWS](https://aws.amazon.com/console/).
 2. Navegue a buscando pelo serviço "Step-Functions".
@@ -17,10 +17,7 @@ Demonstrar, na prática, como orquestrar um *Workflow automatizado* com o servi�
 
 ## Exemplo de Caso de Uso
 Imagine um processo que envolva:
-1. Coletar dados de um bucket S3  
-2. Processar esses dados em uma função Lambda  
-3. Salvar o resultado em outro bucket  
-4. Enviar uma notificação pelo SNS ao final  
+1. Realizar um backup de um banco de dados semanalmente.  
 
 Com o Step Functions, podemos *orquestrar essas etapas automaticamente* sem precisar criar código para controlar cada fluxo.
 
