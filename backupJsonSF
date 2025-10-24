@@ -1,0 +1,54 @@
+{
+  "StartAt": "CheckCurrentSpending",
+  "States": {
+    "CheckCurrentSpending": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:budgets:describeBudget",
+      "Parameters": {
+        "AccountId": "$.SEU_ACCOUNT_ID",
+        "BudgetName": "$.My Zero-Spend Budget"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "HandleError"
+        }
+      ],
+      "Next": "EvaluateSpending"
+    },
+    "EvaluateSpending": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Budget.ActualSpend.Amount",
+          "NumericGreaterThan": 0,
+          "Next": "SendBudgetAlert"
+        }
+      ],
+      "Default": "BudgetWithinLimit"
+    },
+    "SendBudgetAlert": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:region:account:budget-alerts",
+        "Message": "Orçamento ultrapassado! Account: $.AccountId, Budget: $.BudgetName, Current: $.Budget.ActualSpend.Amount, Limit: $.Budget.BudgetLimit.Amount",
+        "Subject": "ALERTA: Orçamento Ultrapassado"
+      },
+      "Next": "SuccessState"
+    },
+    "BudgetWithinLimit": {
+      "Type": "Pass",
+      "Next": "SuccessState"
+    },
+    "HandleError": {
+      "Type": "Fail",
+      "Cause": "Erro ao verificar orçamento"
+    },
+    "SuccessState": {
+      "Type": "Succeed"
+    }
+  }
+}
