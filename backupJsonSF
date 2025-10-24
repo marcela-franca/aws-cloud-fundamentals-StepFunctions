@@ -1,55 +1,54 @@
 {
-  "Comment": "State machine to create weekly DynamoDB backups with SNS notification on failure",
-  "StartAt": "CreateBackup",
+  "StartAt": "CheckCurrentSpending",
   "States": {
-    "CreateBackup": {
+    "CheckCurrentSpending": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::aws-sdk:dynamodb:createBackup",
+      "Resource": "arn:aws:states:::aws-sdk:budgets:describeBudget",
       "Parameters": {
-        "BackupName.$": "States.Format('MyDataBackup-{}', $$.Execution.StartTime)",
-        "TableName": "MyData"
+        "AccountId": "$.SEU_ACCOUNT_ID",
+        "BudgetName": "$.My Zero-Spend Budget"
       },
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "ServiceException",
-            "ThrottlingException",
-            "TooManyRequestsException"
-          ],
-          "IntervalSeconds": 5,
-          "MaxAttempts": 5,
-          "BackoffRate": 2.0
-        }
-      ],
       "Catch": [
         {
           "ErrorEquals": [
             "States.ALL"
           ],
-          "ResultPath": "$.errorInfo",
-          "Next": "NotifyFailure"
+          "Next": "HandleError"
         }
       ],
-      "Next": "Wait"
+      "Next": "EvaluateSpending"
     },
-    "Wait": {
-      "Type": "Wait",
-      "Seconds": 604800,
-      "Next": "CreateBackup"
+    "EvaluateSpending": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Budget.ActualSpend.Amount",
+          "NumericGreaterThan": 0,
+          "Next": "SendBudgetAlert"
+        }
+      ],
+      "Default": "BudgetWithinLimit"
     },
-    "NotifyFailure": {
+    "SendBudgetAlert": {
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
       "Parameters": {
-        "Message.$": "States.Format('Backup failed for table MyData: {}', $.errorInfo.Cause)",
-        "TopicArn": "arn:aws:sns:us-east-1:123456789012:MyBackupAlerts"
+        "TopicArn": "arn:aws:sns:region:account:budget-alerts",
+        "Message": "Orçamento ultrapassado! Account: $.AccountId, Budget: $.BudgetName, Current: $.Budget.ActualSpend.Amount, Limit: $.Budget.BudgetLimit.Amount",
+        "Subject": "ALERTA: Orçamento Ultrapassado"
       },
-      "Next": "FailState"
+      "Next": "SuccessState"
     },
-    "FailState": {
+    "BudgetWithinLimit": {
+      "Type": "Pass",
+      "Next": "SuccessState"
+    },
+    "HandleError": {
       "Type": "Fail",
-      "Cause": "BackupFailed",
-      "Error": "CreateBackupError"
+      "Cause": "Erro ao verificar orçamento"
+    },
+    "SuccessState": {
+      "Type": "Succeed"
     }
   }
 }
